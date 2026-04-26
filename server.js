@@ -14,12 +14,23 @@ app.post('/api/analyze', async (req, res) => {
         const buffer = Buffer.from(image, 'base64');
         const response = await fetch('https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-large', {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` },
+            headers: { 
+                'Authorization': `Bearer ${token}`,
+                'x-wait-for-model': 'true'
+            },
             body: buffer
         });
+        
+        if (!response.ok) {
+            const text = await response.text();
+            console.error("HF Error Response:", text);
+            return res.status(response.status).json({ error: "Hugging Face API Error. Model might be loading." });
+        }
+
         const result = await response.json();
         res.json(result);
     } catch (error) {
+        console.error("Server Error:", error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -32,13 +43,20 @@ app.post('/api/generate', async (req, res) => {
             method: 'POST',
             headers: { 
                 'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'x-wait-for-model': 'true'
             },
             body: JSON.stringify({
                 inputs: prompt,
                 parameters: { max_new_tokens: 800, return_full_text: false }
             })
         });
+
+        if (!response.ok) {
+            const text = await response.text();
+            return res.status(response.status).json({ error: "AI text model error." });
+        }
+
         const result = await response.json();
         res.json(result);
     } catch (error) {
