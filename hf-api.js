@@ -2,43 +2,39 @@
  * Hugging Face API Connector using Official SDK
  */
 
-import { HfInference } from "@huggingface/inference";
-
 class HFConnector {
     constructor() {
-        this.client = null;
-        this.models = {
-            imageToText: 'Salesforce/blip-image-captioning-large',
-            textGeneration: 'mistralai/Mistral-7B-Instruct-v0.3'
-        };
+        this.token = '';
     }
 
     setToken(token) {
-        this.client = new HfInference(token);
+        this.token = token;
     }
 
-    /**
-     * Анализ изображения через BLIP
-     */
     async analyzeImage(imageBlob) {
-        if (!this.client) throw new Error('HF Client not initialized. Check token.');
+        if (!this.token) throw new Error('Token is missing');
 
-        try {
-            const result = await this.client.imageToText({
-                model: this.models.imageToText,
-                data: imageBlob,
-            });
-            return result.generated_text;
-        } catch (error) {
-            console.error("Image Analysis Error:", error);
-            throw error;
-        }
+        const reader = new FileReader();
+        const base64Promise = new Promise((resolve) => {
+            reader.onloadend = () => resolve(reader.result.split(',')[1]);
+            reader.readAsDataURL(imageBlob);
+        });
+        const base64Data = await base64Promise;
+
+        const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: base64Data, token: this.token })
+        });
+
+        const result = await response.json();
+        if (result.error) throw new Error(result.error);
+        return result[0].generated_text;
     }
 
     async generateContent(productData, visualDescription) {
-        if (!this.client) throw new Error('HF Client not initialized');
+        if (!this.token) throw new Error('Token is missing');
 
-        // Мощный промпт, который заставляет AI быть самостоятельным и слушать промпт пользователя
         const prompt = `[INST] Ты — креативный директор маркетплейсов. 
         ДАННЫЕ:
         - Визуальный анализ фото: "${visualDescription}"
@@ -46,39 +42,23 @@ class HFConnector {
         ${productData.name ? `- НАЗВАНИЕ ТОВАРА: "${productData.name}"` : '- НАЗВАНИЕ: определи сам по фото'}
 
         ЗАДАЧА:
-        1. Используй "ТВОЙ КРЕАТИВНЫЙ ПРОМПТ" как главную инструкцию для стиля текста и выбора преимуществ.
+        1. Используй "ТВОЙ КРЕАТИВНЫЙ ПРОМПТ" как главную инструкцию.
         2. Идентифицируй бренд и модель.
-        3. Сгенерируй продающий контент, который соответствует заданному стилю.
-
-        ОТВЕТЬ СТРОГО JSON:
-        {
-            "title": "Заголовок",
-            "benefits": ["Факт 1", "Факт 2", "Факт 3"],
-            "description": "SEO текст",
-            "usp": "УТП"
-        }
+        3. Верни СТРОГО JSON: {"title": "", "benefits": ["", "", ""], "description": "", "usp": ""}
         Язык: Русский. [/INST]`;
 
-        try {
-            const result = await this.client.textGeneration({
-                model: this.models.textGeneration,
-                inputs: prompt,
-                parameters: {
-                    max_new_tokens: 800,
-                    return_full_text: false,
-                    temperature: 0.8,
-                    repetition_penalty: 1.2
-                }
-            });
+        const response = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, token: this.token })
+        });
 
-            const textOutput = result.generated_text;
-            const jsonMatch = textOutput.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) throw new Error("AI failed to return JSON");
-            return JSON.parse(jsonMatch[0]);
-        } catch (error) {
-            console.error("AI Error:", error);
-            throw new Error(`Ошибка AI: ${error.message}. Попробуйте включить VPN или расширение CORS.`);
-        }
+        const result = await response.json();
+        if (result.error) throw new Error(result.error);
+        
+        const textOutput = Array.isArray(result) ? result[0].generated_text : result.generated_text;
+        const jsonMatch = textOutput.match(/\{[\s\S]*\}/);
+        return JSON.parse(jsonMatch ? jsonMatch[0] : textOutput);
     }
 }
 
