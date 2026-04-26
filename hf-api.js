@@ -21,15 +21,23 @@ class HFConnector {
         });
         const base64Data = await base64Promise;
 
-        const response = await fetch('/api/analyze', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: base64Data, token: this.token })
-        });
+        try {
+            const response = await fetch('/api/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: base64Data, token: this.token })
+            });
 
-        const result = await response.json();
-        if (result.error) throw new Error(result.error);
-        return result[0].generated_text;
+            const result = await response.json();
+            if (!response.ok) {
+                console.warn("Image analysis failed, using generic description:", result.error);
+                return "a professional product photo"; // Fallback, чтобы не прерывать процесс
+            }
+            return result[0].generated_text;
+        } catch (error) {
+            console.error("Analyze Error:", error);
+            return "product photo";
+        }
     }
 
     async generateContent(productData, visualDescription) {
