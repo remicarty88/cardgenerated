@@ -31,95 +31,100 @@ class CardGenerator {
     drawBase() {
         if (!this.currentImage) return;
         
-        // 1. Красивый градиентный фон вместо скучного белого
-        const bgGradient = this.ctx.createRadialGradient(500, 500, 100, 500, 500, 800);
-        bgGradient.addColorStop(0, '#ffffff');
-        bgGradient.addColorStop(1, '#f0f2f5');
+        // 1. Создаем глубокий стильный фон с виньеткой
+        const bgGradient = this.ctx.createRadialGradient(500, 500, 50, 500, 500, 700);
+        bgGradient.addColorStop(0, '#2d3748');
+        bgGradient.addColorStop(1, '#000000');
         this.ctx.fillStyle = bgGradient;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // 2. Отрисовка товара с легкой тенью для объема
-        const ratio = Math.min(this.canvas.width / this.currentImage.width, this.canvas.height / this.currentImage.height) * 0.8;
+        // 2. Добавляем декоративное свечение позади товара
+        const glow = this.ctx.createRadialGradient(700, 500, 0, 700, 500, 400);
+        glow.addColorStop(0, 'rgba(99, 102, 241, 0.3)');
+        glow.addColorStop(1, 'rgba(0,0,0,0)');
+        this.ctx.fillStyle = glow;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // 3. Рисуем товар с мощной тенью и отражением
+        const ratio = Math.min(this.canvas.width / this.currentImage.width, this.canvas.height / this.currentImage.height) * 0.75;
         const w = this.currentImage.width * ratio;
         const h = this.currentImage.height * ratio;
-        const x = (this.canvas.width - w) / 2 + 100; // Сдвигаем вправо, чтобы слева был текст
+        const x = (this.canvas.width - w) / 2 + 150; 
         const y = (this.canvas.height - h) / 2;
         
-        this.ctx.shadowColor = 'rgba(0,0,0,0.15)';
-        this.ctx.shadowBlur = 50;
-        this.ctx.shadowOffsetX = 20;
-        this.ctx.shadowOffsetY = 20;
-        
+        this.ctx.shadowColor = '#6366f1';
+        this.ctx.shadowBlur = 100;
         this.ctx.drawImage(this.currentImage, x, y, w, h);
-        
-        // Сброс тени для остальных элементов
         this.ctx.shadowBlur = 0;
-        this.ctx.shadowOffsetX = 0;
-        this.ctx.shadowOffsetY = 0;
     }
 
     render(data) {
-        this.drawBase();
-        if (!data) return;
+        const design = data.design || {
+            bgColor: '#000000',
+            accentColor: '#6366f1',
+            layout: 'right',
+            glowColor: 'rgba(99, 102, 241, 0.4)'
+        };
 
-        // 3. Дизайнерский заголовок (Top Left)
-        this.ctx.fillStyle = '#1e293b';
-        this.ctx.font = 'bold 72px "Inter", sans-serif';
-        this.ctx.textAlign = 'left';
+        // 1. Фон от AI
+        const bgGradient = this.ctx.createRadialGradient(500, 500, 50, 500, 500, 700);
+        bgGradient.addColorStop(0, design.bgColor);
+        bgGradient.addColorStop(1, '#000000');
+        this.ctx.fillStyle = bgGradient;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // 2. Свечение от AI
+        const glow = this.ctx.createRadialGradient(
+            design.layout === 'left' ? 300 : 700, 500, 0, 
+            design.layout === 'left' ? 300 : 700, 500, 500
+        );
+        glow.addColorStop(0, design.glowColor);
+        glow.addColorStop(1, 'rgba(0,0,0,0)');
+        this.ctx.fillStyle = glow;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // 3. Динамическое положение товара
+        const ratio = Math.min(this.canvas.width / this.currentImage.width, this.canvas.height / this.currentImage.height) * 0.7;
+        const w = this.currentImage.width * ratio;
+        const h = this.currentImage.height * ratio;
+        const x = design.layout === 'left' ? (this.canvas.width - w - 50) : 50; 
+        const y = (this.canvas.height - h) / 2;
         
-        // Рисуем декоративную полоску под заголовком
-        this.ctx.fillStyle = '#6366f1';
-        this.ctx.fillRect(50, 130, 80, 8);
+        this.ctx.shadowColor = design.accentColor;
+        this.ctx.shadowBlur = 60;
+        this.ctx.drawImage(this.currentImage, x, y, w, h);
+        this.ctx.shadowBlur = 0;
 
-        this.ctx.fillStyle = '#1e293b';
-        const title = data.title || "Новый товар";
-        this.wrapText(title, 50, 220, 450, 80);
+        // 4. Текстовый блок (Позиция зависит от Layout)
+        const textX = design.layout === 'left' ? 60 : 550;
+        
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.font = 'bold 80px "Inter", sans-serif';
+        this.wrapText(data.title.toUpperCase(), textX, 150, 420, 85);
 
-        // 4. Инфографика преимуществ (Left Side)
-        if (data.benefits && data.benefits.length > 0) {
-            let benefitY = 450;
-            data.benefits.slice(0, 3).forEach((benefit, index) => {
-                // Иконка-чекбокс
-                this.ctx.fillStyle = '#6366f1';
-                this.drawRoundedRect(50, benefitY - 35, 40, 40, 8);
+        // 5. Инфографика в цвете AI
+        if (data.benefits) {
+            let benefitY = 400;
+            data.benefits.slice(0, 3).forEach((benefit) => {
+                this.ctx.fillStyle = design.accentColor;
+                const textWidth = this.ctx.measureText(benefit.toUpperCase()).width;
+                this.drawRoundedRect(textX, benefitY - 50, textWidth + 40, 60, 10);
+
                 this.ctx.fillStyle = '#ffffff';
-                this.ctx.font = 'bold 24px "Inter", sans-serif';
-                this.ctx.fillText('✓', 58, benefitY - 6);
-
-                // Текст преимущества
-                this.ctx.fillStyle = '#475569';
-                this.ctx.font = '600 32px "Inter", sans-serif';
-                this.ctx.fillText(benefit, 110, benefitY - 5);
-                
+                this.ctx.font = 'bold 28px "Inter", sans-serif';
+                this.ctx.fillText(benefit.toUpperCase(), textX + 20, benefitY - 10);
                 benefitY += 80;
             });
         }
 
-        // 5. УТП Бэйдж (Bottom)
-        if (data.usp) {
-            this.ctx.fillStyle = '#1e293b';
-            this.drawRoundedRect(50, 850, 500, 100, 20);
-            
-            this.ctx.fillStyle = '#fbbf24';
-            this.ctx.font = 'bold 24px "Inter", sans-serif';
-            this.ctx.fillText('СПЕЦИАЛЬНОЕ ПРЕДЛОЖЕНИЕ', 80, 890);
-            
-            this.ctx.fillStyle = '#ffffff';
-            this.ctx.font = 'bold 36px "Inter", sans-serif';
-            this.ctx.fillText(data.usp.toUpperCase(), 80, 930);
-        }
-
-        // 6. Акцентный круг (Top Right)
-        this.ctx.beginPath();
-        this.ctx.arc(900, 100, 80, 0, Math.PI * 2);
-        this.ctx.fillStyle = '#6366f1';
-        this.ctx.fill();
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = 'bold 32px "Inter", sans-serif';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText('NEW', 900, 95);
-        this.ctx.font = '500 20px "Inter", sans-serif';
-        this.ctx.fillText('2024', 900, 120);
+        // 6. УТП
+        this.ctx.save();
+        this.ctx.fillStyle = '#fbbf24';
+        this.drawRoundedRect(textX, 820, 400, 100, 15);
+        this.ctx.fillStyle = '#000000';
+        this.ctx.font = 'bold 40px "Inter", sans-serif';
+        this.ctx.fillText(data.usp.toUpperCase(), textX + 20, 885);
+        this.ctx.restore();
     }
 
     wrapText(text, x, y, maxWidth, lineHeight) {
