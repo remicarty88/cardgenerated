@@ -12,7 +12,8 @@ app.post('/api/analyze', async (req, res) => {
     const { image, token } = req.body;
     try {
         const buffer = Buffer.from(image, 'base64');
-        const response = await fetch('https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-large', {
+        // Используем base модель - она быстрее и стабильнее просыпается
+        const response = await fetch('https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-base', {
             method: 'POST',
             headers: { 
                 'Authorization': `Bearer ${token}`,
@@ -24,7 +25,11 @@ app.post('/api/analyze', async (req, res) => {
         if (!response.ok) {
             const text = await response.text();
             console.error("HF Error Response:", text);
-            return res.status(response.status).json({ error: "Hugging Face API Error. Model might be loading." });
+            // Если модель грузится, возвращаем специальный статус, чтобы фронтенд знал
+            return res.status(response.status).json({ 
+                error: "Model is loading", 
+                details: "Hugging Face is waking up the model. Please wait 15 seconds." 
+            });
         }
 
         const result = await response.json();
