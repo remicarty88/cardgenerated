@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Product Card Generator | SaaS Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdn.jsdelivr.net/npm/lucide-static@0.321.0/font/lucide.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="lucide-zap"></i>
+                <span>AI Card Studio</span>
+            </div>
+            <nav>
+                <a href="#" class="active"><i class="lucide-layout-dashboard"></i> Dashboard</a>
+                <a href="#"><i class="lucide-image"></i> My Cards</a>
+                <a href="#"><i class="lucide-settings"></i> Settings</a>
+            </nav>
+            <div class="api-status">
+                <div class="status-dot"></div>
+                <span>Hugging Face: Connected</span>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header>
+                <h1>Генератор карточек товара</h1>
+                <div class="user-profile">
+                    <input type="password" id="hf-token" placeholder="Введите HF Token (hf_...)" class="token-input" value="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">
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+                <!-- Конфигуратор -->
+                <section class="config-panel card">
+                    <h2>Параметры товара</h2>
+                    <div class="upload-zone" id="drop-zone">
+                        <i class="lucide-upload-cloud"></i>
+                        <p>Перетащите фото или <span>нажмите для выбора</span></p>
+                        <input type="file" id="image-upload" accept="image/*" hidden>
+                        <div id="image-preview" class="preview-thumb hidden"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Название товара (необязательно)</label>
+                        <input type="text" id="product-name" placeholder="Оставь пустым, если хочешь чтобы AI определил сам">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Креативный промпт</label>
+                        <textarea id="product-specs" placeholder="Например: сделай в стиле киберпанк, акцент на неоновые цвета и мощность..."></textarea>
+                    </div>
+
+                    <button id="generate-btn" class="primary-btn">
+                        <i class="lucide-sparkles"></i> Сгенерировать AI Карточку
+                    </button>
+                </section>
+
+                <!-- Предпросмотр -->
+                <section class="preview-panel card">
+                    <div class="panel-header">
+                        <h2>Live Preview</h2>
+                        <div class="actions">
+                            <button id="export-btn" class="icon-btn" title="Скачать PNG"><i class="lucide-download"></i></button>
+                        </div>
+                    </div>
+                    
+                    <div class="canvas-wrapper">
+                        <canvas id="card-canvas"></canvas>
+                        <div id="ai-loader" class="loader-overlay hidden">
+                            <div class="spinner"></div>
+                            <p id="loader-text">Анализируем фото...</p>
+                        </div>
+                    </div>
+
+                    <div class="ai-output card">
+                        <h3>AI Контент</h3>
+                        <div class="output-tabs">
+                            <button class="tab-btn active" data-tab="seo">SEO Описание</button>
+                            <button class="tab-btn" data-tab="usp">УТП</button>
+                        </div>
+                        <div id="seo-content" class="tab-content">
+                            <p class="placeholder-text">AI сгенерирует описание после запуска...</p>
+                        </div>
+                        <div id="usp-content" class="tab-content hidden">
+                            <ul id="usp-list"></ul>
+                        </div>
+                        <button id="copy-text-btn" class="secondary-btn"><i class="lucide-copy"></i> Копировать все</button>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "@huggingface/inference": "https://cdn.jsdelivr.net/npm/@huggingface/inference@2.6.4/+esm"
+      }
+    }
+    </script>
+    <script src="hf-api.js" type="module"></script>
+    <script src="card-generator.js"></script>
+    <script src="app.js" type="module"></script>
+</body>
+</html>
