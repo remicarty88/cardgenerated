@@ -32,57 +32,62 @@ app.post('/api/generate-full', async (req, res) => {
     const { image, prompt, token } = req.body;
     
     try {
-        // 1. Анализ фото (Бесплатно)
+        // 1. Анализ фото (Используем сверхстабильную модель)
         console.log("Анализ фото...");
-        const visionResult = await fetchWithRetry('https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-base', {
+        const visionResult = await fetchWithRetry('https://api-inference.huggingface.co/models/nlpconnect/vit-gpt2-image-captioning', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: Buffer.from(image, 'base64')
         });
-        const visualDescription = visionResult[0].generated_text;
-
-        // 2. Генерация дизайна и текста (Qwen 2.5)
-        console.log("Генерация уникального дизайна...");
-        const textPrompt = `[INST] Ты — AI Дизайнер. Твоя задача спроектировать уникальную карточку.
-        Товар на фото: ${visualDescription}.
-        Пожелания: ${prompt || 'сделай сочно'}.
-
-        Верни JSON с контентом и ПАРАМЕТРАМИ ДИЗАЙНА:
-        {
-            "title": "заголовок",
-            "benefits": ["пункт1", "пункт2", "пункт3"],
-            "usp": "утп",
-            "design": {
-                "bgColor": "HEX цвет фона",
-                "accentColor": "HEX цвет элементов",
-                "layout": "left или right (где текст)",
-                "glowColor": "цвет свечения товара"
-            }
-        }
-        Язык: Русский. [/INST]`;
         
-        const textResult = await fetchWithRetry('https://api-inference.huggingface.co/models/Qwen/Qwen2.5-7B-Instruct', {
+        // Безопасное извлечение текста
+        const visualDescription = (visionResult && visionResult[0] && visionResult[0].generated_text) 
+            ? visionResult[0].generated_text 
+            : "a high quality product";
+
+        // 2. Генерация дизайна (Используем Zephyr - она быстрее всех просыпается)
+        console.log("Генерация дизайна...");
+        const textPrompt = `<|system|>
+Ты AI Дизайнер. Твоя задача спроектировать карточку товара. 
+Отвечай ТОЛЬКО чистым JSON. Не пиши лишнего текста.</s>
+ 
+Товар: ${visualDescription}.
+Пожелания: ${prompt || 'сделай топовый дизайн'}.
+Верни JSON:
+{
+    "title": "заголовок",
+    "benefits": ["пункт1", "пункт2", "пункт3"],
+    "usp": "утп",
+    "design": {
+        "bgColor": "#1e293b",
+        "accentColor": "#6366f1",
+        "layout": "right",
+        "glowColor": "rgba(99,102,241,0.4)"
+    }
+}</s>
+<|assistant|>`;
+        
+        const textResult = await fetchWithRetry('https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta', {
             method: 'POST',
             headers: { 
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                inputs: textPrompt,
-                parameters: { max_new_tokens: 500, return_full_text: false }
+            body: JSON.stringify({ 
+                inputs: textPrompt, 
+                parameters: { max_new_tokens: 500, return_full_text: false } 
             })
         });
 
         const textOutput = Array.isArray(textResult) ? textResult[0].generated_text : textResult.generated_text;
         const jsonMatch = textOutput.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error("AI returned invalid format");
         
+        if (!jsonMatch) throw new Error("AI failed to design JSON");
         res.json(JSON.parse(jsonMatch[0]));
-        res.json(finalData);
 
     } catch (error) {
         console.error("Pipeline Error:", error);
-        res.status(500).json({ error: "AI всё еще просыпается или токен неверный. Попробуйте через минуту." });
+        res.status(500).json({ error: "AI занят. Попробуйте нажать кнопку еще раз." });
     }
 });
 
