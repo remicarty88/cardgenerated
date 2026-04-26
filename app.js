@@ -55,8 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. Generation Logic
     generateBtn.addEventListener('click', async () => {
         const token = hfTokenInput.value.trim();
-        const manualName = document.getElementById('product-name').value;
-        const manualSpecs = document.getElementById('product-specs').value;
+        const userPrompt = document.getElementById('product-specs').value;
 
         if (!token) {
             alert('Пожалуйста, введите Hugging Face Access Token');
@@ -67,33 +66,20 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        hfConnector.setToken(token);
-        setLoading(true, 'AI изучает ваше фото (определяем бренд и модель)...');
+        setLoading(true, 'AI анализирует фото...');
 
         try {
-            // Step 1: Image to Text - Глубокий анализ
-            const visualDescription = await hfConnector.analyzeImage(currentBlob);
-            console.log("Visual Analysis Result:", visualDescription);
+            // Мгновенная реакция
+            aiGeneratedData = await hfConnector.generateFullCard(currentBlob, userPrompt);
+            
+            // Если пользователь ввел название, приоритет ему
+            if (manualName) aiGeneratedData.title = manualName;
 
-            // Step 2: Content Generation - На основе анализа
-            setLoading(true, 'AI создает продающую концепцию...');
-            aiGeneratedData = await hfConnector.generateContent({
-                name: manualName, // Если пусто, AI решит сам
-                specs: manualSpecs
-            }, visualDescription);
-
-            console.log("AI Generated Concept:", aiGeneratedData);
-
-            // Step 3: Render to Canvas
-            setLoading(true, 'Рисуем финальный дизайн...');
             cardGen.render(aiGeneratedData);
-
-            // Step 4: Update UI
             updateTextContent(aiGeneratedData);
             
         } catch (error) {
             console.error(error);
-            alert('Ошибка: ' + error.message);
         } finally {
             setLoading(false);
         }
@@ -143,3 +129,4 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('Текст скопирован!');
     });
 });
+
