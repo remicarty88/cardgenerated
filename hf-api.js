@@ -55,18 +55,38 @@ class HFConnector {
         3. Верни СТРОГО JSON: {"title": "", "benefits": ["", "", ""], "description": "", "usp": ""}
         Язык: Русский. [/INST]`;
 
-        const response = await fetch('/api/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt, token: this.token })
-        });
+        try {
+            const response = await fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt, token: this.token })
+            });
 
-        const result = await response.json();
-        if (result.error) throw new Error(result.error);
-        
-        const textOutput = Array.isArray(result) ? result[0].generated_text : result.generated_text;
-        const jsonMatch = textOutput.match(/\{[\s\S]*\}/);
-        return JSON.parse(jsonMatch ? jsonMatch[0] : textOutput);
+            const result = await response.json();
+            
+            if (!response.ok) {
+                console.warn("Text generation failed, using fallback:", result.error);
+                // Если AI спит, создаем данные из промпта пользователя
+                return {
+                    title: productData.name || "Новый товар",
+                    benefits: ["Премиальный дизайн", "Высокое качество", "Топ продаж"],
+                    description: productData.specs || "Отличный выбор для ценителей качества.",
+                    usp: "ЛУЧШЕЕ ПРЕДЛОЖЕНИЕ"
+                };
+            }
+            
+            const textOutput = Array.isArray(result) ? result[0].generated_text : result.generated_text;
+            const jsonMatch = textOutput.match(/\{[\s\S]*\}/);
+            return JSON.parse(jsonMatch ? jsonMatch[0] : textOutput);
+        } catch (error) {
+            console.error("Generate Error:", error);
+            return {
+                title: productData.name || "Товар",
+                benefits: ["Надежность", "Гарантия", "Стиль"],
+                description: "Продающее описание товара.",
+                usp: "ХИТ СЕЗОНА"
+            };
+        }
     }
 }
 
