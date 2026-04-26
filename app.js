@@ -73,7 +73,8 @@ document.addEventListener('DOMContentLoaded', () => {
             aiGeneratedData = await hfConnector.generateFullCard(currentBlob, userPrompt);
             
             // Если пользователь ввел название, приоритет ему
-            if (manualName) aiGeneratedData.title = manualName;
+            const manualNameValue = document.getElementById('product-name').value;
+            if (manualNameValue) aiGeneratedData.title = manualNameValue;
 
             cardGen.render(aiGeneratedData);
             updateTextContent(aiGeneratedData);
@@ -129,4 +130,5 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('Текст скопирован!');
     });
 });
+
 
